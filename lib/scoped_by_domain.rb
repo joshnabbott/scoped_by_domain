@@ -67,7 +67,7 @@ module ScopedByDomain
       # And delegate the scoped methods to the scoping model
       # Use delegate_to_nil as it returns the proper default values for the associated record even when it's nil
       domain_scoped_methods.each do |domain_scoped_method|
-        delegate_to_nil :"#{domain_scoped_method}", :to => domain_scoping_model_singular_table_name.to_sym
+        delegate :"#{domain_scoped_method}", :to => domain_scoping_model_singular_table_name.to_sym
       end
     end
   end
