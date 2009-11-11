@@ -5,12 +5,14 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "scoped_by_domain"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Gem provides domain-scoping capability to your model attributes.}
+    gem.description = %Q{Use this gem to scope active record attribute values by specific domains. EG: is_active returns `true` at oakley.com, but `false` at oakley.ca.}
     gem.email = "joshnabbott@gmail.com"
     gem.homepage = "http://github.com/joshnabbott/scoped_by_domain"
     gem.authors = ["Josh N. Abbott"]
     gem.add_development_dependency "rspec"
+    gem.add_runtime_dependency 'activerecord', '>= 2.3.4'
+    gem.add_runtime_dependency 'better_delegation', '>= 1.0.0'
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
 rescue LoadError
