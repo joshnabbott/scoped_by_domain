@@ -6,8 +6,11 @@ module ScopedByDomain
   end
 
   module ClassMethods
-    def scoped_by_domain(model_name, *methods)
-      self.instance_eval <<-EOV
+    def scoped_by_domain(model_name, *args)
+      options = args.extract_options!
+      options = default_options.update(options)
+
+      self.instance_eval do
         require_dependency model_name.to_s
 
         def domain_scoped_methods
@@ -38,10 +41,18 @@ module ScopedByDomain
         def domain_scoping_model_singular_table_name
           @domain_scoping_model_singular_table_name ||= @domain_scoping_model.table_name.singularize
         end
-      EOV
+      end
+
+      if options[:force_association]
+        self.class_eval %{
+          def after_initialize
+            self.#{model_name} ||= self.build_#{model_name}(:domain_id => Domain.current_domain_id)
+          end
+        }
+      end
 
       self.domain_scoping_model  = model_name
-      self.domain_scoped_methods = methods
+      self.domain_scoped_methods = args
 
       # We'll use this for the belongs_to association
       klass_name = self.class_name
@@ -55,7 +66,7 @@ module ScopedByDomain
 
       domain_scoping_model.class_eval do
         def set_domain_id
-          self.domain_id = Domain.current_domain_id if self.domain_id.nil?
+          self.domain_id = Domain.current_domain_id
         end
       end
 
@@ -66,9 +77,13 @@ module ScopedByDomain
 
       # And delegate the scoped methods to the scoping model
       # Use delegate_to_nil as it returns the proper default values for the associated record even when it's nil
-      domain_scoped_methods.each do |domain_scoped_method|
-        delegate :"#{domain_scoped_method}", :to => domain_scoping_model_singular_table_name.to_sym
-      end
+      delegate *(self.domain_scoped_methods << { :to => domain_scoping_model_singular_table_name.to_sym })
+    end
+
+    def default_options
+      {
+        :force_association => true
+      }
     end
   end
 end
