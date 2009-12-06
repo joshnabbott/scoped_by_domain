@@ -18,12 +18,7 @@ module ScopedByDomain
         end
 
         def domain_scoped_methods=(methods)
-          instance = domain_scoping_model.new
-          @domain_scoped_methods ||= methods.inject([]) do |domain_scoped_methods, method|
-            return domain_scoped_methods unless instance.respond_to?(method.to_sym)
-            domain_scoped_methods << method
-            domain_scoped_methods
-          end
+          @domain_scoped_methods ||= methods
         end
 
         def domain_scoping_model
