@@ -7,10 +7,13 @@ module ScopedByDomain
     def scoped_by_domain(&block)
       yield block
 
+      # Gonna need to know this in a few cases below
+      scoped_klass = self
+
       # Add these to the domain scoping model
       @domain_scoping_model.instance_eval do
         before_validation :set_domain_id
-        belongs_to :"#{self.class_name.tableize.singularize}"
+        belongs_to :"#{scoped_klass.class_name.tableize.singularize}"
         belongs_to :domain
       end
 
