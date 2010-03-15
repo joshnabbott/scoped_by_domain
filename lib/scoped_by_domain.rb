@@ -30,15 +30,6 @@ module ScopedByDomain
 
       # And delegate the scoped methods to the scoping model
       delegate *(@domain_scoped_methods << { :to => @domain_scoping_model_singular_table_name.to_sym })
-
-      if domain_scoping_options[:force_association]
-        ## Why is this even here? better_delegation should be handling this for us.
-        self.class_eval %{
-          def after_initialize
-            self.#{domain_scoping_model_singular_table_name} ||= self.build_#{domain_scoping_model_singular_table_name}(:domain_id => Domain.current_domain_id)
-          end
-        }
-      end
     end
 
     def domain_scoping_conditions
