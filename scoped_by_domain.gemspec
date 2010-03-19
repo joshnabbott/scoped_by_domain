@@ -47,16 +47,13 @@ Gem::Specification.new do |s|
     if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0') then
       s.add_development_dependency(%q<rspec>, [">= 0"])
       s.add_runtime_dependency(%q<activerecord>, [">= 2.3.4"])
-      s.add_runtime_dependency(%q<better_delegation>, [">= 1.0.0"])
     else
       s.add_dependency(%q<rspec>, [">= 0"])
       s.add_dependency(%q<activerecord>, [">= 2.3.4"])
-      s.add_dependency(%q<better_delegation>, [">= 1.0.0"])
     end
   else
     s.add_dependency(%q<rspec>, [">= 0"])
     s.add_dependency(%q<activerecord>, [">= 2.3.4"])
-    s.add_dependency(%q<better_delegation>, [">= 1.0.0"])
   end
 end
 

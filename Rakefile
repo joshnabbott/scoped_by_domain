@@ -12,7 +12,6 @@ begin
     gem.authors = ["Josh N. Abbott"]
     gem.add_development_dependency "rspec"
     gem.add_runtime_dependency 'activerecord', '>= 2.3.4'
-    gem.add_runtime_dependency 'better_delegation', '>= 1.0.0'
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
 rescue LoadError
