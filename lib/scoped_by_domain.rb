@@ -1,3 +1,4 @@
+# TODO: handling of default domains should be moved to the data layer as a mysql trigger
 module ScopedByDomain
   def self.included(base)
     base.extend(ClassMethods)
@@ -30,7 +31,6 @@ module ScopedByDomain
       validates_associated self.domain_scoping_model_singular_table_name.to_sym
 
       # And delegate the scoped methods to the scoping model
-      # delegate *(@domain_scoped_methods << { :to => @domain_scoping_model_singular_table_name.to_sym })
       @domain_scoped_methods.each do |method_to_scope|
         methods = [method_to_scope]
         methods << "#{method_to_scope}=" unless method_to_scope.to_s.last == "?"
@@ -46,9 +46,9 @@ module ScopedByDomain
 
     def domain_scoping_conditions
       @domain_scoping_conditions ||= if domain_scoping_options[:use_default_domain]
-        ["`domain_id` = IFNULL((SELECT `#{domain_scoping_model_table_name}`.`domain_id` FROM `#{domain_scoping_model_table_name}` WHERE `#{domain_scoping_model_table_name}`.`domain_id` = ? LIMIT 1), ?)", Domain.current_domain_id, Domain.default_domain_id]
+        '`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM #{self.class.domain_scoping_model_table_name} WHERE `#{self.class.domain_scoping_model_primary_key_name}` = #{self.id} AND domain_id = #{Domain.current_domain_id})'
       else
-        ['`domain_id` = ?', Domain.current_domain_id]
+        'domain_id = #{Domain.current_domain_id}'
       end
     end
 
@@ -58,6 +58,10 @@ module ScopedByDomain
 
     def domain_scoping_model(model_name = nil)
       @domain_scoping_model ||= model_name.to_s.classify.constantize
+    end
+
+    def domain_scoping_model_primary_key_name
+      @domain_scoping_model_primary_key_name ||= self.reflect_on_association(:"#{domain_scoping_model_singular_table_name}").primary_key_name
     end
 
     def domain_scoped_methods(*methods)
