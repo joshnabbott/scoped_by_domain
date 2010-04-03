@@ -13,7 +13,7 @@ module ScopedByDomain
 
       # Add these to the domain scoping model
       @domain_scoping_model.instance_eval do
-        before_validation :set_domain_id
+        before_validation_on_create :set_domain_id
         belongs_to :"#{scoped_klass.class_name.tableize.singularize}"
         belongs_to :domain
         validates_presence_of :domain_id
