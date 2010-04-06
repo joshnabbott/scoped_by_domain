@@ -46,7 +46,8 @@ module ScopedByDomain
 
     def domain_scoping_conditions
       @domain_scoping_conditions ||= if domain_scoping_options[:use_default_domain]
-        '`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM #{self.class.domain_scoping_model_table_name} WHERE `#{self.class.domain_scoping_model_primary_key_name}` = #{self.id} AND domain_id = #{Domain.current_domain_id})'
+        # '`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM #{self.class.domain_scoping_model_table_name} WHERE `#{self.class.domain_scoping_model_primary_key_name}` = #{self.id} AND domain_id = #{Domain.current_domain_id})'
+        'domain_id = #{Domain.current_domain_id}'
       else
         'domain_id = #{Domain.current_domain_id}'
       end
@@ -61,7 +62,7 @@ module ScopedByDomain
     end
 
     def domain_scoping_model_primary_key_name
-      @domain_scoping_model_primary_key_name ||= self.reflect_on_association(:"#{domain_scoping_model_singular_table_name}").primary_key_name
+      @domain_scoping_model_primary_key_name ||= self.name.underscore + '_id'
     end
 
     def domain_scoped_methods(*methods)
@@ -69,7 +70,7 @@ module ScopedByDomain
     end
 
     def domain_scoping_model_table_name
-      @domain_scoping_model_table_name ||= @domain_scoping_model.table_name
+      @@domain_scoping_model_table_name ||= @domain_scoping_model.table_name
     end
 
     def domain_scoping_model_singular_table_name
