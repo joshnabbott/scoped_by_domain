@@ -1,4 +1,5 @@
-# TODO: handling of default domains should be moved to the data layer as a mysql trigger
+# TODO: handle default domains by instantiating new object with attributes of the default domain
+# as opposed to looking up and instantiating the default domain record.
 module ScopedByDomain
   def self.included(base)
     base.extend(ClassMethods)
@@ -70,7 +71,7 @@ module ScopedByDomain
     end
 
     def domain_scoping_model_table_name
-      @@domain_scoping_model_table_name ||= @domain_scoping_model.table_name
+      @domain_scoping_model_table_name ||= @domain_scoping_model.table_name
     end
 
     def domain_scoping_model_singular_table_name

@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{scoped_by_domain}
-  s.version = "0.1.8"
+  s.version = "0.1.9"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Josh N. Abbott"]
-  s.date = %q{2010-04-02}
+  s.date = %q{2010-04-06}
   s.description = %q{Use this gem to scope active record attribute values by specific domains. EG: is_active returns `true` at oakley.com, but `false` at oakley.ca.}
   s.email = %q{joshnabbott@gmail.com}
   s.extra_rdoc_files = [
