@@ -1,5 +1,3 @@
-# TODO: handle default domains by instantiating new object with attributes of the default domain
-# as opposed to looking up and instantiating the default domain record.
 module ScopedByDomain
   def self.included(base)
     base.extend(ClassMethods)
@@ -14,6 +12,7 @@ module ScopedByDomain
 
       # Add these to the domain scoping model
       @domain_scoping_model.instance_eval do
+        attr_protected :domain_id
         before_validation_on_create :set_domain_id
         belongs_to :"#{scoped_klass.class_name.tableize.singularize}"
         belongs_to :domain
@@ -27,8 +26,12 @@ module ScopedByDomain
       end
 
       # Now define the associations that will make all this possible
-      has_many self.domain_scoping_model_table_name.to_sym, :dependent => :destroy
-      has_one self.domain_scoping_model_singular_table_name.to_sym, :conditions => self.domain_scoping_conditions, :autosave => true
+      has_many self.domain_scoping_model_table_name.to_sym, :dependent => :destroy do
+        def default
+          find(:first, :conditions => { :domain_id => Domain.default_domain_id })
+        end
+      end
+      has_one self.domain_scoping_model_singular_table_name.to_sym, :conditions => 'domain_id = #{Domain.current_domain_id}', :autosave => true
       validates_associated self.domain_scoping_model_singular_table_name.to_sym
 
       # And delegate the scoped methods to the scoping model
@@ -38,20 +41,26 @@ module ScopedByDomain
         delegate *(methods << { :to => @domain_scoping_model_singular_table_name.to_sym, :allow_nil => true })
       end
 
-       self.class_eval %{
+       self.class_eval <<-RUBY
          def after_initialize
-           self.#{domain_scoping_model_singular_table_name} ||= self.build_#{domain_scoping_model_singular_table_name}(:domain_id => Domain.current_domain_id)
+           find_or_build_#{domain_scoping_model_singular_table_name}
          end
-       }
-    end
 
-    def domain_scoping_conditions
-      @domain_scoping_conditions ||= if domain_scoping_options[:use_default_domain]
-        # '`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM #{self.class.domain_scoping_model_table_name} WHERE `#{self.class.domain_scoping_model_primary_key_name}` = #{self.id} AND domain_id = #{Domain.current_domain_id})'
-        'domain_id = #{Domain.current_domain_id}'
-      else
-        'domain_id = #{Domain.current_domain_id}'
-      end
+         def build_#{domain_scoping_model_singular_table_name}_with_default(attributes = {})
+           if self.#{domain_scoping_model_table_name}.exists?(:domain_id => Domain.default_domain_id)
+             default_attributes = self.#{domain_scoping_model_table_name}.default.attributes
+             build_#{domain_scoping_model_singular_table_name}_without_default(default_attributes.update(attributes))
+           else
+             build_#{domain_scoping_model_singular_table_name}_without_default
+           end
+         end
+         alias_method_chain(:build_#{domain_scoping_model_singular_table_name}, :default) if self.domain_scoping_options[:use_default_domain]
+
+         def find_or_build_#{domain_scoping_model_singular_table_name}
+           # self.#{domain_scoping_model_singular_table_name} ||= self.build_#{domain_scoping_model_singular_table_name}
+           self.#{domain_scoping_model_singular_table_name} || self.build_#{domain_scoping_model_singular_table_name}
+         end
+       RUBY
     end
 
     def domain_scoping_options(options = {})
