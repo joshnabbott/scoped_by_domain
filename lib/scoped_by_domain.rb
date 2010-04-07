@@ -1,3 +1,4 @@
+# TODO: Add documentation so this is easy to figure out
 module ScopedByDomain
   def self.included(base)
     base.extend(ClassMethods)
