@@ -33,6 +33,7 @@ module ScopedByDomain
         end
       end
       has_one self.domain_scoping_model_singular_table_name.to_sym, :conditions => 'domain_id = #{Domain.current_domain_id}', :autosave => true
+
       validates_associated self.domain_scoping_model_singular_table_name.to_sym
 
       # And delegate the scoped methods to the scoping model
@@ -42,26 +43,46 @@ module ScopedByDomain
         delegate *(methods << { :to => @domain_scoping_model_singular_table_name.to_sym, :allow_nil => true })
       end
 
-       self.class_eval <<-RUBY
-         def after_initialize
-           find_or_build_#{domain_scoping_model_singular_table_name}
-         end
+      self.class_eval <<-RUBY
+        def after_initialize
+          find_or_build_#{domain_scoping_model_singular_table_name}
+        end
 
-         def build_#{domain_scoping_model_singular_table_name}_with_default(attributes = {})
-           if self.#{domain_scoping_model_table_name}.exists?(:domain_id => Domain.default_domain_id)
-             default_attributes = self.#{domain_scoping_model_table_name}.default.attributes
-             build_#{domain_scoping_model_singular_table_name}_without_default(default_attributes.update(attributes))
-           else
-             build_#{domain_scoping_model_singular_table_name}_without_default
-           end
-         end
-         alias_method_chain(:build_#{domain_scoping_model_singular_table_name}, :default) if self.domain_scoping_options[:use_default_domain]
+        def find_or_build_#{domain_scoping_model_singular_table_name}
+          self.#{domain_scoping_model_singular_table_name} || self.build_#{domain_scoping_model_singular_table_name}
+        end
 
-         def find_or_build_#{domain_scoping_model_singular_table_name}
-           # self.#{domain_scoping_model_singular_table_name} ||= self.build_#{domain_scoping_model_singular_table_name}
-           self.#{domain_scoping_model_singular_table_name} || self.build_#{domain_scoping_model_singular_table_name}
-         end
-       RUBY
+        # Default domain support
+        if self.domain_scoping_options[:use_default_domain]
+          # These methods are for multi finders (Article.all, Article.active, etc.)
+          class << self
+            def count_with_default_domain(*args)
+              self.with_scope(:find => { :include => :#{domain_scoping_model_table_name}, :conditions => "`#{domain_scoping_model_table_name}`.`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM `#{domain_scoping_model_table_name}` WHERE `#{self.name.underscore + '_id'}` = `#{self.table_name}`.`id` AND `#{domain_scoping_model_table_name}`.`domain_id` = #{Domain.current_domain_id})" }) do
+                count_without_default_domain(*args)
+              end
+            end
+            alias_method_chain :count, :default_domain
+
+            def find_with_default_domain(*args)
+              options = args.extract_options!
+              self.with_scope(:find => { :include => :#{domain_scoping_model_table_name}, :conditions => "`#{domain_scoping_model_table_name}`.`domain_id` = (SELECT (CASE count(*) WHEN 0 THEN #{Domain.default_domain_id} ELSE #{Domain.current_domain_id} END) AS `domain_id` FROM `#{domain_scoping_model_table_name}` WHERE `#{self.name.underscore + '_id'}` = `#{self.table_name}`.`id` AND `#{domain_scoping_model_table_name}`.`domain_id` = #{Domain.current_domain_id})" }) do
+                find_without_default_domain(args.first, options)
+              end
+            end
+            alias_method_chain :find, :default_domain
+          end
+
+          def build_#{domain_scoping_model_singular_table_name}_with_default(attributes = {})
+            if self.#{domain_scoping_model_table_name}.exists?(:domain_id => Domain.default_domain_id)
+              default_attributes = self.#{domain_scoping_model_table_name}.default.attributes
+              build_#{domain_scoping_model_singular_table_name}_without_default(default_attributes.update(attributes))
+            else
+              build_#{domain_scoping_model_singular_table_name}_without_default
+            end
+          end
+          alias_method_chain(:build_#{domain_scoping_model_singular_table_name}, :default)
+        end
+      RUBY
     end
 
     def domain_scoping_options(options = {})
