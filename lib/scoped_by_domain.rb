@@ -1,4 +1,5 @@
 # TODO: Add documentation so this is easy to figure out
+# TODO: Fix the hackery (eg: has_default_record?)
 module ScopedByDomain
   def self.included(base)
     base.extend(ClassMethods)
@@ -21,7 +22,13 @@ module ScopedByDomain
       end
 
       @domain_scoping_model.class_eval do
+        def has_default_record?
+          foreign_key = self.class.name.tableize.gsub(/_for_domains/, '_id')
+          self.class.exists?(:domain_id => Domain.default_domain_id, :"#{foreign_key}" => self.send(:"#{foreign_key}"))
+        end
+
         def set_domain_id
+          # self.domain_id = self.has_default_record? ? Domain.current_domain_id : Domain.default_domain_id
           self.domain_id = Domain.current_domain_id
         end
       end
@@ -44,12 +51,21 @@ module ScopedByDomain
       end
 
       self.class_eval <<-RUBY
+        def initialize_with_association(attributes = nil)
+          result                 = initialize_without_association(attributes)
+          instance               = #{domain_scoping_model}.new # HACK
+          association_attributes = attributes.try(:reject) { |key, value| !instance.respond_to?(key.to_s + '=') }
+          build_#{domain_scoping_model_singular_table_name}(association_attributes)
+          result
+        end
+        alias_method_chain :initialize, :association
+
         def after_initialize
           find_or_build_#{domain_scoping_model_singular_table_name}
         end
 
-        def find_or_build_#{domain_scoping_model_singular_table_name}
-          self.#{domain_scoping_model_singular_table_name} || self.build_#{domain_scoping_model_singular_table_name}
+        def find_or_build_#{domain_scoping_model_singular_table_name}(attributes = nil)
+          self.#{domain_scoping_model_singular_table_name} || self.build_#{domain_scoping_model_singular_table_name}(attributes)
         end
 
         # Default domain support
@@ -75,9 +91,9 @@ module ScopedByDomain
           def build_#{domain_scoping_model_singular_table_name}_with_default(attributes = {})
             if self.#{domain_scoping_model_table_name}.exists?(:domain_id => Domain.default_domain_id)
               default_attributes = self.#{domain_scoping_model_table_name}.default.attributes
-              build_#{domain_scoping_model_singular_table_name}_without_default(default_attributes.update(attributes))
+              build_#{domain_scoping_model_singular_table_name}_without_default(default_attributes)
             else
-              build_#{domain_scoping_model_singular_table_name}_without_default
+              build_#{domain_scoping_model_singular_table_name}_without_default(attributes)
             end
           end
           alias_method_chain(:build_#{domain_scoping_model_singular_table_name}, :default)
