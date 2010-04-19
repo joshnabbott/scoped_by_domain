@@ -5,23 +5,23 @@ module ScopedByDomain
     base.extend(ClassMethods)
   end
 
-  module Domainable
-    def domain_scoping_options(options = {})
-      @@domain_scoping_options ||= options.reverse_merge!(default_options)
-    end
-
-    def default_options
-      {
-        :force_association => true,
-        :use_default_domain => false
-      }
-    end
-  end
+  # module Domainable
+  #   def domain_scoping_options(options = {})
+  #     @domain_scoping_options ||= options.reverse_merge!(default_options)
+  #   end
+  # 
+  #   def default_options
+  #     {
+  #       :force_association => true,
+  #       :use_default_domain => false
+  #     }
+  #   end
+  # end
 
   module ClassMethods
     def scoped_by_domain(&block)
-      extend Domainable
-      include Domainable
+      # extend Domainable
+      # include Domainable
 
       yield block
 
@@ -30,7 +30,7 @@ module ScopedByDomain
 
       # Add these to the domain scoping model
       @domain_scoping_model.instance_eval do
-        include Domainable
+        # include Domainable
         attr_protected :domain_id
         before_validation_on_create :set_domain_id
         belongs_to :"#{scoped_klass.class_name.tableize.singularize}"
@@ -45,12 +45,12 @@ module ScopedByDomain
         end
 
         def set_domain_id
-          self.domain_id = if self.domain_scoping_options[:use_default_domain]
-            self.has_default_record? ? Domain.current_domain_id : Domain.default_domain_id
-          else
-            Domain.current_domain_id
-          end
-          # self.domain_id = Domain.current_domain_id
+          # self.domain_id = if self.domain_scoping_options[:use_default_domain]
+          #   self.has_default_record? ? Domain.current_domain_id : Domain.default_domain_id
+          # else
+          #   Domain.current_domain_id
+          # end
+          self.domain_id = Domain.current_domain_id
         end
       end
 
@@ -120,6 +120,17 @@ module ScopedByDomain
           alias_method_chain(:build_#{domain_scoping_model_singular_table_name}, :default)
         end
       RUBY
+    end
+
+    def domain_scoping_options(options = {})
+      @domain_scoping_options ||= options.reverse_merge!(default_options)
+    end
+
+    def default_options
+      {
+        :force_association => true,
+        :use_default_domain => false
+      }
     end
 
     def domain_scoping_model(model_name = nil)
