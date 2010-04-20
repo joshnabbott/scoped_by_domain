@@ -72,14 +72,13 @@ module ScopedByDomain
       end
 
       self.class_eval <<-RUBY
-        def initialize_with_association(attributes = nil)
-          result                 = initialize_without_association(attributes)
+        def initialize(attributes = nil)
+          result                 = super
           instance               = #{domain_scoping_model}.new # HACK
           association_attributes = attributes.try(:reject) { |key, value| !instance.respond_to?(key.to_s + '=') }
           build_#{domain_scoping_model_singular_table_name}(association_attributes)
           result
         end
-        alias_method_chain :initialize, :association
 
         def after_initialize
           find_or_build_#{domain_scoping_model_singular_table_name}
